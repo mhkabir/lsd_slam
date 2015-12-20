@@ -26,7 +26,7 @@
 
 #include "IOWrapper/ImageDisplay.h"
 #include "IOWrapper/Output3DWrapper.h"
-#include "IOWrapper/InputImageStream.h"
+#include "IOWrapper/InputStream.h"
 #include "util/globalFuncs.h"
 
 #include <iostream>
@@ -35,18 +35,20 @@ namespace lsd_slam
 {
 
 
-LiveSLAMWrapper::LiveSLAMWrapper(InputImageStream* imageStream, Output3DWrapper* outputWrapper)
+LiveSLAMWrapper::LiveSLAMWrapper(InputStream* inputStream, Output3DWrapper* outputWrapper)
 {
-	this->imageStream = imageStream;
+	this->inputStream   = inputStream;
 	this->outputWrapper = outputWrapper;
-	imageStream->getBuffer()->setReceiver(this);
+	
+	inputStream->getImgBuffer()->setReceiver(this);
+ 	inputStream->getPoseBuffer()->setReceiver(this);
 
-	fx = imageStream->fx();
-	fy = imageStream->fy();
-	cx = imageStream->cx();
-	cy = imageStream->cy();
-	width = imageStream->width();
-	height = imageStream->height();
+	fx = inputStream->fx();
+	fy = inputStream->fy();
+	cx = inputStream->cx();
+	cy = inputStream->cy();
+	width = inputStream->width();
+	height = inputStream->height();
 
 	outFileName = packagePath+"estimated_poses.txt";
 
@@ -84,32 +86,48 @@ LiveSLAMWrapper::~LiveSLAMWrapper()
 void LiveSLAMWrapper::Loop()
 {
 	while (true) {
-		boost::unique_lock<boost::recursive_mutex> waitLock(imageStream->getBuffer()->getMutex());
-		while (!fullResetRequested && !(imageStream->getBuffer()->size() > 0)) {
-			notifyCondition.wait(waitLock);
+		boost::unique_lock<boost::recursive_mutex> imgLock(inputStream->getImgBuffer()->getMutex());
+		while (!fullResetRequested && !(inputStream->getImgBuffer()->size() > 0)) {
+			notifyCondition.wait(imgLock);
 		}
-		waitLock.unlock();
+		imgLock.unlock();
 		
 		
 		if(fullResetRequested)
 		{
 			resetAll();
 			fullResetRequested = false;
-			if (!(imageStream->getBuffer()->size() > 0))
+			if (!(inputStream->getImgBuffer()->size() > 0))
 				continue;
 		}
 		
-		TimestampedMat image = imageStream->getBuffer()->first();
-		imageStream->getBuffer()->popFront();
+		TimestampedMat image = inputStream->getImgBuffer()->first();
+		inputStream->getImgBuffer()->popFront();
 		
+		usleep(1000);
+
+	   	boost::unique_lock<boost::recursive_mutex> poseLock(inputStream->getPoseBuffer()->getMutex());
+    		
+    		while (!(inputStream->getPoseBuffer()->size() > 0)) {
+      			ROS_WARN("wait for odom\n");
+      			notifyCondition.wait(poseLock);
+    		}
+    		poseLock.unlock();
+    		
+    		TimestampedPose pose_cam = inputStream->getPoseBuffer()->first();
+    		inputStream->getPoseBuffer()->popFront();
+    		
+ 		// XXX kabir - Need to implement a sync mechanism here?
+     		if (pose_cam.timestamp.toSec() - image.timestamp.toSec() > 0.01 || pose_cam.timestamp.toSec() < image.timestamp.toSec())
+		       	ROS_WARN("High image-pose time delta %f %f", image.timestamp.toSec(), pose_cam.timestamp.toSec());
+
 		// process image
-		//Util::displayImage("MyVideo", image.data);
-		newImageCallback(image.data, image.timestamp);
+		newImageCallback(image.data, pose_cam.data, image.timestamp);
 	}
 }
 
 
-void LiveSLAMWrapper::newImageCallback(const cv::Mat& img, Timestamp imgTime)
+void LiveSLAMWrapper::newImageCallback(const cv::Mat& img, const geometry_msgs::Pose& pose_cam, Timestamp imgTime)
 {
 	++ imageSeqNumber;
 
@@ -129,12 +147,12 @@ void LiveSLAMWrapper::newImageCallback(const cv::Mat& img, Timestamp imgTime)
 	// need to initialize
 	if(!isInitialized)
 	{
-		monoOdometry->randomInit(grayImg.data, imgTime.toSec(), 1);
+		monoOdometry->randomInit(grayImg.data, pose_cam, imgTime.toSec(), 1);
 		isInitialized = true;
 	}
 	else if(isInitialized && monoOdometry != nullptr)
 	{
-		monoOdometry->trackFrame(grayImg.data,imageSeqNumber,false,imgTime.toSec());
+		monoOdometry->trackFrame(grayImg.data, imageSeqNumber, pose_cam, false, imgTime.toSec());
 	}
 }
 

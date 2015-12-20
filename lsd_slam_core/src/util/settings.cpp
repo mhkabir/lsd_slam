@@ -90,7 +90,7 @@ bool useAffineLightningEstimation = true;
 
 
 bool useFabMap = false;
-bool doSlam = true;
+bool doSlam = false;
 bool doKFReActivation = true;
 bool doMapping = true;
 
@@ -107,7 +107,7 @@ bool saveLoopClosureImages =  false;
 bool saveAllTrackingStages = false;
 bool saveAllTrackingStagesInternal = false;
 
-bool continuousPCOutput = false;
+bool continuousPCOutput = true;
 
 
 bool fullResetRequested = false;

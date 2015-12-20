@@ -81,7 +81,7 @@ set(lsd_SOURCE_FILES
 )
 set(SOURCE_FILES
   ${lsd_SOURCE_FILES}
-  ${PROJECT_SOURCE_DIR}/src/IOWrapper/ROS/ROSImageStreamThread.cpp
+  ${PROJECT_SOURCE_DIR}/src/IOWrapper/ROS/ROSInputStreamThread.cpp
   ${PROJECT_SOURCE_DIR}/src/IOWrapper/ROS/ROSOutput3DWrapper.cpp
   ${PROJECT_SOURCE_DIR}/src/IOWrapper/OpenCV/ImageDisplay_OpenCV.cpp
 )
@@ -103,4 +103,3 @@ target_link_libraries(lsdslam ${FABMAP_LIB} ${G2O_LIBRARIES} ${catkin_LIBRARIES}
 # build live ros node
 add_executable(live_slam src/main_live_odometry.cpp)
 target_link_libraries(live_slam lsdslam ${catkin_LIBRARIES} ${G2O_LIBRARIES})
-

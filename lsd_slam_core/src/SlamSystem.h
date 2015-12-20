@@ -28,6 +28,8 @@
 #include "IOWrapper/Timestamp.h"
 #include "opencv2/core/core.hpp"
 
+#include <geometry_msgs/Pose.h>
+
 #include "util/SophusUtil.h"
 
 #include "Tracking/Relocalizer.h"
@@ -73,16 +75,13 @@ public:
 	SlamSystem& operator=(const SlamSystem&) = delete;
 	~SlamSystem();
 
-	void randomInit(uchar* image, double timeStamp, int id);
-	void gtDepthInit(uchar* image, float* depth, double timeStamp, int id);
-
-	
+	void randomInit(uchar* image, const geometry_msgs::Pose& pose_cam, double timeStamp, int id);
 
 	// tracks a frame.
 	// first frame will return Identity = camToWord.
 	// returns camToWord transformation of the tracked frame.
 	// frameID needs to be monotonically increasing.
-	void trackFrame(uchar* image, unsigned int frameID, bool blockUntilMapped, double timestamp);
+	void trackFrame(uchar* image, unsigned int frameID, const geometry_msgs::Pose& pose, bool blockUntilMapped, double timestamp);
 
 	// finalizes the system, i.e. blocks and does all remaining loop-closures etc.
 	void finalize();

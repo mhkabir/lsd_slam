@@ -25,12 +25,12 @@
 #include "util/globalFuncs.h"
 #include "SlamSystem.h"
 
-
-#include "IOWrapper/ROS/ROSImageStreamThread.h"
+#include "IOWrapper/ROS/ROSInputStreamThread.h"
 #include "IOWrapper/ROS/ROSOutput3DWrapper.h"
 #include "IOWrapper/ROS/rosReconfigure.h"
 
 #include <X11/Xlib.h>
+#include <ros/package.h>
 
 using namespace lsd_slam;
 int main( int argc, char** argv )
@@ -47,7 +47,7 @@ int main( int argc, char** argv )
 
 	packagePath = ros::package::getPath("lsd_slam_core")+"/";
 
-	InputImageStream* inputStream = new ROSImageStreamThread();
+	InputStream* inputStream = new ROSInputStreamThread();
 
 	std::string calibFile;
 	if(ros::param::get("~calib", calibFile))
@@ -63,10 +63,8 @@ int main( int argc, char** argv )
 	LiveSLAMWrapper slamNode(inputStream, outputWrapper);
 	slamNode.Loop();
 
-
-
 	if (inputStream != nullptr)
-		delete inputStream;
+     		delete inputStream;
 	if (outputWrapper != nullptr)
 		delete outputWrapper;
 

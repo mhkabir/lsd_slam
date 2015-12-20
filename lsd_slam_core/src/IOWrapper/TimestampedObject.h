@@ -24,6 +24,7 @@
 #include <chrono>
 
 #include <opencv2/core/core.hpp>
+#include <geometry_msgs/Pose.h>
 
 #include "IOWrapper/Timestamp.h"
 
@@ -38,7 +39,9 @@ struct TimestampedObject
 	Timestamp timestamp;
 };
 
-typedef TimestampedObject< cv::Mat > TimestampedMat;
+typedef TimestampedObject<cv::Mat> TimestampedMat;
+
+typedef TimestampedObject<geometry_msgs::Pose> TimestampedPose;
 
 }
 #endif

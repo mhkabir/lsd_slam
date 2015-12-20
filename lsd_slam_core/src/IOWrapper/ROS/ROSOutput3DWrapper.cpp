@@ -31,8 +31,13 @@
 #include "DataStructures/Frame.h"
 #include "GlobalMapping/KeyFrameGraph.h"
 #include "sophus/sim3.hpp"
-#include "geometry_msgs/PoseStamped.h"
 #include "GlobalMapping/g2oTypeSim3Sophus.h"
+
+#include "geometry_msgs/PoseStamped.h"
+#include "sensor_msgs/PointCloud.h"
+#include "sensor_msgs/PointCloud2.h"
+#include "sensor_msgs/point_cloud_conversion.h"
+
 
 namespace lsd_slam
 {
@@ -57,7 +62,9 @@ ROSOutput3DWrapper::ROSOutput3DWrapper(int width, int height)
 
 	pose_channel = nh_.resolveName("lsd_slam/pose");
 	pose_publisher = nh_.advertise<geometry_msgs::PoseStamped>(pose_channel,1);
-
+	
+	pointcloud_channel = nh_.resolveName("lsd_slam/pointcloud");
+	pointcloud_publisher = nh_.advertise<sensor_msgs::PointCloud2>(pointcloud_channel,1);
 
 	publishLvl=0;
 }
@@ -70,7 +77,6 @@ ROSOutput3DWrapper::~ROSOutput3DWrapper()
 void ROSOutput3DWrapper::publishKeyframe(Frame* f)
 {
 	lsd_slam_viewer::keyframeMsg fMsg;
-
 
 	boost::shared_lock<boost::shared_mutex> lock = f->getActiveLock();
 
@@ -89,7 +95,6 @@ void ROSOutput3DWrapper::publishKeyframe(Frame* f)
 	fMsg.width = w;
 	fMsg.height = h;
 
-
 	fMsg.pointcloud.resize(w*h*sizeof(InputPointDense));
 
 	InputPointDense* pc = (InputPointDense*)fMsg.pointcloud.data();
@@ -107,8 +112,54 @@ void ROSOutput3DWrapper::publishKeyframe(Frame* f)
 		pc[idx].color[2] = color[idx];
 		pc[idx].color[3] = color[idx];
 	}
+	
+	// Publish ROS pointcloud
+        if(pc == 0)
+        return;
+	
+        sensor_msgs::PointCloud pointcloud;
+        pointcloud.header.stamp.sec = fMsg.time;
 
+        double fxi = 1/fMsg.fx;
+        double fyi = 1/fMsg.fy;
+        double cxi = -fMsg.cx / fMsg.fx;
+        double cyi = -fMsg.cy / fMsg.fy;
+
+        for(int y = 1; y < h - 1; y++)
+        {
+            for(int x = 1; x < w - 1; x++)
+            {
+                // Skip all points with zero depths.
+                if(pc[x+y*w].idepth <= 0)
+                {
+                    continue;
+                }
+
+                // Calculate the depth of the point.
+                float depth = 1 / pc[x+y*w].idepth;
+
+                geometry_msgs::Point32 point;
+                
+                // Create 3D point
+                Sophus::Sim3f cameraToWorld;
+                memcpy(cameraToWorld.data(), fMsg.camToWorld.data(), 7*sizeof(float));
+                
+                Sophus::Vector3f transformed_point = cameraToWorld * (Sophus::Vector3f((x*fxi + cxi), (y*fyi + cyi), 1) * depth);   
+                point.x = transformed_point[0];
+                point.y = transformed_point[1];
+                point.z = transformed_point[2];
+
+                // Add point to pointcloud.
+                pointcloud.points.push_back(point);
+            }
+        }
+        sensor_msgs::PointCloud2 pointcloud2;
+        sensor_msgs::convertPointCloudToPointCloud2(pointcloud,pointcloud2);
+        pointcloud2.header.frame_id = "camera"; // XXX
+	
 	keyframe_publisher.publish(fMsg);
+	pointcloud_publisher.publish(pointcloud2);
+	
 }
 
 void ROSOutput3DWrapper::publishTrackedFrame(Frame* kf)

@@ -95,7 +95,9 @@ private:
 	std::string debugInfo_channel;
 	ros::Publisher debugInfo_publisher;
 
-
+	std::string pointcloud_channel;
+	ros::Publisher pointcloud_publisher;
+	
 	std::string pose_channel;
 	ros::Publisher pose_publisher;
 

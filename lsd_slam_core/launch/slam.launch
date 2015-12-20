@@ -1,0 +1,8 @@
+<launch>
+	<include file="$(find camera1394)/launch/firefly.launch" />
+	
+	<node pkg="lsd_slam_core" type="live_slam" name="slam_node" output="screen" clear_params="true">
+		<remap from="/image" to="/camera/image_raw"/>
+		<remap from="/camera_info" to="/camera/camera_info"/>
+	</node>
+</launch>

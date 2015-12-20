@@ -18,8 +18,8 @@
 * along with LSD-SLAM. If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "DataStructures/Frame.h"
-#include "DataStructures/FrameMemory.h"
+#include "Frame.h"
+#include "FrameMemory.h"
 #include "DepthEstimation/DepthMapPixelHypothesis.h"
 #include "Tracking/TrackingReference.h"
 
@@ -32,9 +32,9 @@ int privateFrameAllocCount = 0;
 
 
 
-Frame::Frame(int id, int width, int height, const Eigen::Matrix3f& K, double timestamp, const unsigned char* image)
+Frame::Frame(int id, int width, int height, const Eigen::Matrix3f& K, double timestamp, const unsigned char* image, const geometry_msgs::Pose& pose_cam)
 {
-	initialize(id, width, height, K, timestamp);
+	initialize(id, width, height, K, timestamp, pose_cam);
 	
 	data.image[0] = FrameMemory::getInstance().getFloatBuffer(data.width[0]*data.height[0]);
 	float* maxPt = data.image[0] + data.width[0]*data.height[0];
@@ -45,20 +45,6 @@ Frame::Frame(int id, int width, int height, const Eigen::Matrix3f& K, double tim
 		image++;
 	}
 
-	data.imageValid[0] = true;
-
-	privateFrameAllocCount++;
-
-	if(enablePrintDebugInfo && printMemoryDebugInfo)
-		printf("ALLOCATED frame %d, now there are %d\n", this->id(), privateFrameAllocCount);
-}
-
-Frame::Frame(int id, int width, int height, const Eigen::Matrix3f& K, double timestamp, const float* image)
-{
-	initialize(id, width, height, K, timestamp);
-	
-	data.image[0] = FrameMemory::getInstance().getFloatBuffer(data.width[0]*data.height[0]);
-	memcpy(data.image[0], image, data.width[0]*data.height[0] * sizeof(float));
 	data.imageValid[0] = true;
 
 	privateFrameAllocCount++;
@@ -176,23 +162,6 @@ void Frame::setPermaRef(TrackingReference* reference)
 void Frame::calculateMeanInformation()
 {
 	return;
-
-	if(numMappablePixels < 0)
-		maxGradients(0);
-
-	const float* idv = idepthVar(0);
-	const float* idv_max = idv + width(0)*height(0);
-	float sum = 0; int goodpx = 0;
-	for(const float* pt=idv; pt < idv_max; pt++)
-	{
-		if(*pt > 0)
-		{
-			sum += sqrtf(1.0f / *pt);
-			goodpx++;
-		}
-	}
-
-	meanInformation = sum / goodpx;
 }
 
 
@@ -394,7 +363,7 @@ bool Frame::minimizeInMemory()
 	return false;
 }
 
-void Frame::initialize(int id, int width, int height, const Eigen::Matrix3f& K, double timestamp)
+void Frame::initialize(int id, int width, int height, const Eigen::Matrix3f& K, double timestamp, const geometry_msgs::Pose& pose_cam)
 {
 	data.id = id;
 	

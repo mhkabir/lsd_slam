@@ -1399,7 +1399,7 @@ void DepthMap::finalizeKeyFrame()
 
 int DepthMap::debugPlotDepthMap()
 {
-	if(activeKeyFrame == 0) return 1;
+	if(activeKeyFrame == nullptr) return 1;
 
 	cv::Mat keyFrameImage(activeKeyFrame->height(), activeKeyFrame->width(), CV_32F, const_cast<float*>(activeKeyFrameImageData));
 	keyFrameImage.convertTo(debugImageDepth, CV_8UC1);

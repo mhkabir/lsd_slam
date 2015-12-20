@@ -19,12 +19,13 @@
 */
 
 #pragma once
+#include <geometry_msgs/Pose.h>
 #include "util/SophusUtil.h"
 #include "util/settings.h"
 #include <boost/thread/recursive_mutex.hpp>
 #include <boost/thread/shared_mutex.hpp>
-#include "DataStructures/FramePoseStruct.h"
-#include "DataStructures/FrameMemory.h"
+#include "FramePoseStruct.h"
+#include "FrameMemory.h"
 #include "unordered_set"
 #include "util/settings.h"
 
@@ -45,9 +46,7 @@ public:
 	friend class FrameMemory;
 
 
-	Frame(int id, int width, int height, const Eigen::Matrix3f& K, double timestamp, const unsigned char* image);
-
-	Frame(int id, int width, int height, const Eigen::Matrix3f& K, double timestamp, const float* image);
+	Frame(int id, int width, int height, const Eigen::Matrix3f& K, double timestamp, const unsigned char* image, const geometry_msgs::Pose& pose_cam);
 
 	~Frame();
 	
@@ -210,7 +209,7 @@ private:
 	void require(int dataFlags, int level = 0);
 	void release(int dataFlags, bool pyramidsOnly, bool invalidateOnly);
 
-	void initialize(int id, int width, int height, const Eigen::Matrix3f& K, double timestamp);
+	void initialize(int id, int width, int height, const Eigen::Matrix3f& K, double timestamp, const geometry_msgs::Pose& pose_cam);
 	void setDepth_Allocate();
 	
 	void buildImage(int level);

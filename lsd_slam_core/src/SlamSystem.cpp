@@ -827,34 +827,7 @@ bool SlamSystem::doMappingIteration()
 	}
 }
 
-
-void SlamSystem::gtDepthInit(uchar* image, float* depth, double timeStamp, int id)
-{
-	printf("Doing GT initialization!\n");
-
-	currentKeyFrameMutex.lock();
-
-	currentKeyFrame.reset(new Frame(id, width, height, K, timeStamp, image));
-	currentKeyFrame->setDepthFromGroundTruth(depth);
-
-	map->initializeFromGTDepth(currentKeyFrame.get());
-	keyFrameGraph->addFrame(currentKeyFrame.get());
-
-	currentKeyFrameMutex.unlock();
-
-	if(doSlam)
-	{
-		keyFrameGraph->idToKeyFrameMutex.lock();
-		keyFrameGraph->idToKeyFrame.insert(std::make_pair(currentKeyFrame->id(), currentKeyFrame));
-		keyFrameGraph->idToKeyFrameMutex.unlock();
-	}
-	if(continuousPCOutput && outputWrapper != 0) outputWrapper->publishKeyframe(currentKeyFrame.get());
-
-	printf("Done GT initialization!\n");
-}
-
-
-void SlamSystem::randomInit(uchar* image, double timeStamp, int id)
+void SlamSystem::randomInit(uchar* image, const geometry_msgs::Pose& pose_cam, double timeStamp, int id)
 {
 	printf("Doing Random initialization!\n");
 
@@ -864,7 +837,7 @@ void SlamSystem::randomInit(uchar* image, double timeStamp, int id)
 
 	currentKeyFrameMutex.lock();
 
-	currentKeyFrame.reset(new Frame(id, width, height, K, timeStamp, image));
+	currentKeyFrame.reset(new Frame(id, width, height, K, timeStamp, image, pose_cam));
 	map->initializeRandomly(currentKeyFrame.get());
 	keyFrameGraph->addFrame(currentKeyFrame.get());
 
@@ -887,10 +860,10 @@ void SlamSystem::randomInit(uchar* image, double timeStamp, int id)
 
 }
 
-void SlamSystem::trackFrame(uchar* image, unsigned int frameID, bool blockUntilMapped, double timestamp)
+void SlamSystem::trackFrame(uchar* image, unsigned int frameID, const geometry_msgs::Pose& pose, bool blockUntilMapped, double timestamp)
 {
 	// Create new frame
-	std::shared_ptr<Frame> trackingNewFrame(new Frame(frameID, width, height, K, timestamp, image));
+	std::shared_ptr<Frame> trackingNewFrame(new Frame(frameID, width, height, K, timestamp, image, pose));
 
 	if(!trackingIsGood)
 	{

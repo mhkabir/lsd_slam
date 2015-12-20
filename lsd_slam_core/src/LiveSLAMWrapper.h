@@ -24,9 +24,8 @@
 #include <fstream>
 #include <chrono>
 
-#include "IOWrapper/Timestamp.h"
-#include "IOWrapper/NotifyBuffer.h"
-#include "IOWrapper/TimestampedObject.h"
+#include "IOWrapper/InputStream.h"
+
 #include "util/SophusUtil.h"
 
 namespace cv {
@@ -50,7 +49,7 @@ friend class LiveSLAMWrapperROS;
 public:
 	EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
-	LiveSLAMWrapper(InputImageStream* imageStream, Output3DWrapper* outputWrapper);
+	LiveSLAMWrapper(InputStream* inputStream, Output3DWrapper* outputWrapper);
 
 	/** Destructor. */
 	~LiveSLAMWrapper();
@@ -66,7 +65,7 @@ public:
 	void resetAll();
 
 	/** Callback function for new RGB images. */
-	void newImageCallback(const cv::Mat& img, Timestamp imgTime);
+	void newImageCallback(const cv::Mat& img, const geometry_msgs::Pose& pose_cam, Timestamp imgTime);
 
 	/** Writes the given time and pose to the outFile. */
 	void logCameraPose(const SE3& camToWorld, double time);
@@ -76,7 +75,7 @@ public:
 	
 private:
 	
-	InputImageStream* imageStream;
+	InputStream*  inputStream;
 	Output3DWrapper* outputWrapper;
 
 	// initialization stuff
